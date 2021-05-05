@@ -1,12 +1,8 @@
 .boton {
-  position: absolute;
+  /* position: absolute;
   top: 20px;
-  left: 20px;
+  left: 20px; */
   color: white;
-}
-
-.boton:hover {
-  cursor: pointer;
 }
 
 .box {

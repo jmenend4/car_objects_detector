@@ -22,8 +22,13 @@ export const getTrainedModel = async () => {
     }
   }
   tf.serialization.registerClass(L2);
+  // tf.registerKernel({
+  //   kernelName: "ResizeNearestNeighbor",
+  //   backendName: "wasm",
+  //   kernelFunc: tf.image.resizeNearestNeighbor
+  // });
 
-  return await tf.loadLayersModel("../../assets/model/model.json");
+  return await tf.loadLayersModel("../assets/model/model.json");
 };
 
 export const predict = (image, model) => {

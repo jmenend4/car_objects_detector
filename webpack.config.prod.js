@@ -3,6 +3,7 @@ const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const webpackBundleAnalyzer = require("webpack-bundle-analyzer");
+const CopyPlugin = require("copy-webpack-plugin");
 
 process.env.NODE_ENV = "production";
 
@@ -41,7 +42,8 @@ module.exports = {
         minifyCSS: true,
         minifyURLs: true
       }
-    })
+    }),
+    new CopyPlugin([{ from: "src/assets", to: "assets" }])
   ],
   module: {
     rules: [
@@ -68,6 +70,10 @@ module.exports = {
             }
           }
         ]
+      },
+      {
+        test: /\.(jpe?g|jfif|png|gif|woff|woff2|eot|ttf|svg|mp4)(\?[a-z0-9=.]+)?$/,
+        use: "url-loader?limit=100000"
       }
     ]
   }

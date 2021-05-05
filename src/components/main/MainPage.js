@@ -1,132 +1,115 @@
-import React, { useEffect, useState } from "react";
-import PropTypes from "prop-types";
-import { connect } from "react-redux";
-import * as modelActions from "../../redux/actions/modelActions";
+import React, { useEffect, useState, useRef } from "react";
 import * as yolo from "../model/Yolo";
 import * as tf from "@tensorflow/tfjs";
+// import wasmSimdPath from "@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm-simd.wasm";
+// import wasmSimdThreadedPath from "@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm-threaded-simd.wasm";
+// import wasmPath from "@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm.wasm";
+// import { setWasmPaths } from "@tensorflow/tfjs-backend-wasm";
 import "./main-page.css";
+import videoFile from "../../assets/video_perilla_2.mp4";
+import modelFile from "../../assets/model/model.json";
 
-const MainPage = ({ model, setModel }) => {
-  // const [model, setModel] = useState(null);
-  const [boxes, setBoxes] = useState([]);
-  const toPredict = "image";
+const MainPage = () => {
+  const [model, setModel] = useState(null);
+  const [buttonLegend, setButtonLegend] = useState("Play");
+  const testVideo = useRef(null);
+  const canvas = useRef(null);
+  const playing = useRef(false);
+  const ctx = useRef(null);
 
   useEffect(() => {
-    let interval = null;
     if (model == null) {
       tf.ready().then(() => {
         loadModel();
+        // setWasmPaths({
+        //   "tfjs-backend-wasm.wasm": wasmPath,
+        //   "tfjs-backend-wasm-simd.wasm": wasmSimdPath,
+        //   "tfjs-backend-wasm-threaded-simd.wasm": wasmSimdThreadedPath
+        // });
+        // tf.setBackend("wasm");
+        console.log("Using backend: " + tf.getBackend());
       });
     } else {
-      if (toPredict == "video") {
-        predictImage();
-      } else {
-        interval = predictVideo();
-      }
+      const intervalId = predictVideo();
+      return () => clearInterval(intervalId);
     }
-    return () => {
-      if (interval != null) {
-        clearInterval(interval);
-      }
-    };
   }, [model]);
 
-  const predictImage = () => {
-    const div = document.getElementById("div0");
-    const testImage = document.createElement("img");
-    testImage.src = "../../assets/Archivo_019.jpeg";
-    testImage.addEventListener(
-      "load",
-      () => {
-        div.appendChild(testImage);
-        console.log(tf.memory().numTensors);
-        tf.tidy(() => setBoxes(yolo.predict(testImage, model)));
-        console.log(tf.memory().numTensors);
-      },
-      false
-    );
-  };
-
-  //predict a video
   const predictVideo = () => {
-    const div = document.getElementById("div0");
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-
-    const testVideo = document.createElement("video");
-    testVideo.src = "../../assets/video_perilla_2.mp4";
-    testVideo.controls = true;
-
-    testVideo.addEventListener(
-      "loadedmetadata",
-      () => {
-        canvas.width = testVideo.videoWidth;
-        canvas.height = testVideo.videoHeight;
-        div.appendChild(testVideo);
-        div.appendChild(canvas);
-      },
-      false
-    );
-
     const interval = setInterval(async () => {
-      const _boxes = tf.tidy(() => {
-        return yolo.predict(testVideo, model);
-      });
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(testVideo, 0, 0);
-      ctx.strokeStyle = "#0000FF";
-      _boxes.forEach((box) => {
-        ctx.strokeRect(box[0], box[1], box[2], box[3]);
-      });
-      console.log(tf.memory().numTensors);
-    }, 200);
+      if (playing.current) {
+        const initTime = new Date();
+        ctx.current.clearRect(
+          0,
+          0,
+          canvas.current.width,
+          canvas.current.height
+        );
+        ctx.current.drawImage(testVideo.current, 0, 0);
+        const _boxes = tf.tidy(() => {
+          return yolo.predict(canvas.current, model);
+        });
 
-    testVideo.addEventListener(
-      "ended",
-      () => {
-        clearInterval(interval);
-      },
-      false
-    );
+        ctx.current.strokeStyle = "#0000FF";
+        _boxes.forEach((box) => {
+          ctx.current.strokeRect(box[0], box[1], box[2], box[3]);
+        });
+        // console.log(tf.memory().numTensors);
+        const endTime = new Date();
+        const fps = 1 / ((endTime - initTime) / 1000);
+        console.log("fps: " + fps);
+      }
+    }, 500);
     return interval;
   };
 
   const loadModel = async () => {
-    // const _model = yolo.getNewYolo(416); // just to keep reference but no longer used
     const _model = await yolo.getTrainedModel();
+    yolo.predict(testVideo.current, _model);
     setModel(_model);
   };
 
+  const play = () => {
+    playing.current = true;
+    setButtonLegend("Pause");
+  };
+
+  const pause = () => {
+    playing.current = false;
+    setButtonLegend("Play");
+  };
+
+  const setCanvasParams = () => {
+    canvas.current.width = testVideo.current.videoWidth;
+    canvas.current.height = testVideo.current.videoHeight;
+    ctx.current = canvas.current.getContext("2d");
+  };
+
   return (
-    <div id="div0">
-      {/* <img id="image19" src="../../assets/Archivo_019.jpeg"></img> */}
-      {boxes.map((box, idx) => (
-        <div
-          key={idx}
-          className="box"
-          style={{
-            "--top": box[1] + "px",
-            "--left": box[0] + "px",
-            "--height": box[3] + "px",
-            "--width": box[2] + "px"
-          }}
-        ></div>
-      ))}
+    <div>
+      <video
+        ref={testVideo}
+        src={videoFile}
+        style={{ display: "none" }}
+        onPlay={() => play()}
+        onPause={() => pause()}
+        onLoadedData={() => setCanvasParams()}
+      ></video>
+      <canvas ref={canvas}></canvas>
+      <button
+        className="boton"
+        onClick={() => {
+          if (playing.current) {
+            testVideo.current.pause();
+          } else {
+            testVideo.current.play();
+          }
+        }}
+      >
+        {buttonLegend}
+      </button>
     </div>
   );
 };
 
-MainPage.propTypes = {
-  model: PropTypes.object,
-  setModel: PropTypes.func.isRequired
-};
-
-const mapStateToProps = (state) => {
-  return { model: state.model };
-};
-
-const mapDispatchToProps = {
-  setModel: modelActions.setModel
-};
-
-export default connect(mapStateToProps, mapDispatchToProps)(MainPage);
+export default MainPage;
