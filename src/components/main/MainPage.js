@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useRef } from "react";
 import * as yolo from "../model/Yolo";
 import * as tf from "@tensorflow/tfjs";
+// import * as tf from "@tensorflow/tfjs-backend-webgpu";
 // import wasmSimdPath from "@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm-simd.wasm";
 // import wasmSimdThreadedPath from "@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm-threaded-simd.wasm";
 // import wasmPath from "@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm.wasm";
 // import { setWasmPaths } from "@tensorflow/tfjs-backend-wasm";
 import "./main-page.css";
 import videoFile from "../../assets/video_perilla_2.mp4";
-import modelFile from "../../assets/model/model.json";
 
 const MainPage = () => {
   const [model, setModel] = useState(null);
@@ -19,15 +19,15 @@ const MainPage = () => {
 
   useEffect(() => {
     if (model == null) {
-      tf.ready().then(() => {
-        loadModel();
+      tf.ready().then(async () => {
         // setWasmPaths({
         //   "tfjs-backend-wasm.wasm": wasmPath,
         //   "tfjs-backend-wasm-simd.wasm": wasmSimdPath,
         //   "tfjs-backend-wasm-threaded-simd.wasm": wasmSimdThreadedPath
         // });
-        // tf.setBackend("wasm");
+        // await tf.setBackend("wasm");
         console.log("Using backend: " + tf.getBackend());
+        await loadModel();
       });
     } else {
       const intervalId = predictVideo();
@@ -65,7 +65,12 @@ const MainPage = () => {
 
   const loadModel = async () => {
     const _model = await yolo.getTrainedModel();
+    console.log("Model loaded");
+    const init = new Date();
     yolo.predict(testVideo.current, _model);
+    const end = new Date();
+    const delta = end - init;
+    console.log("First prediction issued in: " + delta + "ms");
     setModel(_model);
   };
 
@@ -90,24 +95,28 @@ const MainPage = () => {
       <video
         ref={testVideo}
         src={videoFile}
-        style={{ display: "none" }}
+        // controls={true}
+        playsInline
+        // style={{ display: "none" }}
         onPlay={() => play()}
         onPause={() => pause()}
         onLoadedData={() => setCanvasParams()}
       ></video>
       <canvas ref={canvas}></canvas>
-      <button
-        className="boton"
-        onClick={() => {
-          if (playing.current) {
-            testVideo.current.pause();
-          } else {
-            testVideo.current.play();
-          }
-        }}
-      >
-        {buttonLegend}
-      </button>
+      {model != null && (
+        <button
+          className="boton"
+          onClick={() => {
+            if (playing.current) {
+              testVideo.current.pause();
+            } else {
+              testVideo.current.play();
+            }
+          }}
+        >
+          {buttonLegend}
+        </button>
+      )}
     </div>
   );
 };
