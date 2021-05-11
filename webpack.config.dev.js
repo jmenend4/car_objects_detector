@@ -24,9 +24,9 @@ module.exports = {
     https: false
   },
   plugins: [
-    // new webpack.DefinePlugin({
-    //   "process.env.API_URL": JSON.stringify("http://localhost:3001")
-    // }),
+    new webpack.DefinePlugin({
+      "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV)
+    }),
     new HtmlWebpackPlugin({
       template: "src/index.html",
       favicon: "src/favicon.ico"
@@ -47,17 +47,16 @@ module.exports = {
       {
         test: /\.(jpe?g|jfif|png|gif|woff|woff2|eot|ttf|svg|mp4)(\?[a-z0-9=.]+)?$/,
         use: "url-loader?limit=100000"
+      },
+      {
+        test: /\.wasm$/i,
+        type: "javascript/auto",
+        use: [
+          {
+            loader: "file-loader"
+          }
+        ]
       }
-      // ,
-      // {
-      //   test: /\.wasm$/i,
-      //   type: "javascript/auto",
-      //   use: [
-      //     {
-      //       loader: "file-loader"
-      //     }
-      //   ]
-      // }
     ]
   }
 };

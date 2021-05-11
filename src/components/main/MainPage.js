@@ -1,11 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
 import * as yolo from "../model/Yolo";
 import * as tf from "@tensorflow/tfjs";
-// import * as tf from "@tensorflow/tfjs-backend-webgpu";
-// import wasmSimdPath from "@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm-simd.wasm";
-// import wasmSimdThreadedPath from "@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm-threaded-simd.wasm";
-// import wasmPath from "@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm.wasm";
-// import { setWasmPaths } from "@tensorflow/tfjs-backend-wasm";
+import wasmSimdPath from "@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm-simd.wasm";
+import wasmSimdThreadedPath from "@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm-threaded-simd.wasm";
+import wasmPath from "@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm.wasm";
+import { setWasmPaths } from "@tensorflow/tfjs-backend-wasm";
 import "./main-page.css";
 import videoFile from "../../assets/video_perilla_2.mp4";
 
@@ -20,12 +19,13 @@ const MainPage = () => {
   useEffect(() => {
     if (model == null) {
       tf.ready().then(async () => {
-        // setWasmPaths({
-        //   "tfjs-backend-wasm.wasm": wasmPath,
-        //   "tfjs-backend-wasm-simd.wasm": wasmSimdPath,
-        //   "tfjs-backend-wasm-threaded-simd.wasm": wasmSimdThreadedPath
-        // });
-        // await tf.setBackend("wasm");
+        console.log(navigator);
+        setWasmPaths({
+          "tfjs-backend-wasm.wasm": wasmPath,
+          "tfjs-backend-wasm-simd.wasm": wasmSimdPath,
+          "tfjs-backend-wasm-threaded-simd.wasm": wasmSimdThreadedPath
+        });
+        await tf.setBackend("wasm");
         console.log("Using backend: " + tf.getBackend());
         await loadModel();
       });
@@ -64,13 +64,28 @@ const MainPage = () => {
   };
 
   const loadModel = async () => {
-    const _model = await yolo.getTrainedModel();
+    // const _model = await yolo.getTrainedModel();
+    const _model = await tf.loadGraphModel(
+      "../assets/models/mobilenet/model.json"
+    );
     console.log("Model loaded");
-    const init = new Date();
-    yolo.predict(testVideo.current, _model);
-    const end = new Date();
-    const delta = end - init;
+    let init = new Date();
+    // yolo.predict(testVideo.current, _model);
+    await _model.executeAsync(
+      tf.cast(tf.browser.fromPixels(testVideo.current), "float32").expandDims(0)
+    );
+    let end = new Date();
+    let delta = end - init;
     console.log("First prediction issued in: " + delta + "ms");
+    init = new Date();
+    // yolo.predict(testVideo.current, _model);
+    const prediction = await _model.executeAsync(
+      tf.cast(tf.browser.fromPixels(testVideo.current), "float32").expandDims(0)
+    );
+    end = new Date();
+    delta = end - init;
+    console.log("Second prediction issued in: " + delta + "ms");
+    console.log(prediction);
     setModel(_model);
   };
 

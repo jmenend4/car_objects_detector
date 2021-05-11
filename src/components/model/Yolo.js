@@ -28,7 +28,7 @@ export const getTrainedModel = async () => {
   //   kernelFunc: tf.image.resizeNearestNeighbor
   // });
 
-  return await tf.loadLayersModel("../assets/model/model.json");
+  return await tf.loadLayersModel("../assets/models/yolo/model.json");
 };
 
 export const predict = (image, model) => {
